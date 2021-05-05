@@ -1,0 +1,74 @@
+service: metadata
+
+plugins:
+  - serverless-iam-roles-per-function
+  - serverless-pseudo-parameters
+
+custom:
+  baseName: ${self:service}-${opt:stage}
+
+  inputBucketName: ${self:custom.baseName}-input
+  imagesTableName: ${self:custom.baseName}-imagesTable
+
+provider:
+  name: aws
+  stage: ${opt:stage}
+  runtime: nodejs14.x
+  memorySize: 256
+  timeout: 10
+  s3:
+    InputBucket:
+      name: ${self:custom.inputBucketName}
+
+functions:
+  metadataGenerator:
+    name: ${self:custom.baseName}-generator
+    handler: generator.handler
+    environment:
+      TABLE_NAME: ${self:custom.imagesTableName}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+        Resource: arn:aws:s3:::${self:custom.inputBucketName}/*
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:#{AWS::Region}:#{AWS::AccountId}:table/${self:custom.imagesTableName}
+      - Effect: Allow
+        Action:
+          - rekognition:RecognizeCelebrities
+        Resource: "*"
+    events:
+      - s3:
+          bucket: InputBucket
+          event: s3:ObjectCreated:*
+  getImageMetadata:
+    name: ${self:custom.baseName}-endpoint
+    handler: endpoint.handler
+    environment:
+      TABLE_NAME: ${self:custom.imagesTableName}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:#{AWS::Region}:#{AWS::AccountId}:table/${self:custom.imagesTableName}
+    events:
+      - http:
+          path: images/{id}
+          method: GET
+
+resources:
+  Resources:
+
+    ImagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.imagesTableName}
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        BillingMode: PAY_PER_REQUEST

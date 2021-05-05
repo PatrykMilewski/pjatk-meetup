@@ -1,0 +1,19 @@
+{
+  "name": "pjatk-meetup",
+  "version": "1.0.0",
+  "license": "ISC",
+  "scripts": {
+    "deploy": "sls deploy",
+    "remove": "sls remove"
+  },
+  "devDependencies": {
+    "aws-sdk": "2.804.0",
+    "jest": "26.6.3",
+    "serverless": "2.39.2",
+    "serverless-iam-roles-per-function": "3.1.0",
+    "serverless-pseudo-parameters": "2.5.0"
+  },
+  "engines": {
+    "node": ">=12"
+  }
+}
